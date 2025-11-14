@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Η Γάτα του Schrödinger - Πιστή Έκδοση</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #0a0a0a;
+            color: white;
+            text-align: center;
+        }
+        .container {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+        .status {
+            font-size: 24px;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .superposition {
+            background-color: #4ecdc4;
+            color: white;
+        }
+        .collapsed {
+            background-color: #ff6b6b;
+            color: white;
+        }
+        .cat-image {
+            width: 400px;
+            height: 400px;
+            margin: 20px auto;
+            border: 4px solid #444;
+            border-radius: 10px;
+            object-fit: cover;
+            transition: all 0.3s;
+        }
+        .button {
+            background-color: #4ecdc4;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background-color: #45b7af;
+            transform: scale(1.05);
+        }
+        .restart {
+            background-color: #ff6b6b;
+        }
+        .restart:hover {
+            background-color: #e55a5a;
+        }
+        .explanation {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .hidden-camera {
+            position: absolute;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
+            pointer-events: none;
+        }
+        .instructions {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #4ecdc4;
+        }
+        .light-level {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #aaa;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #333;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #4ecdc4;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .final-state {
+            border: 4px solid #ff6b6b;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Η Γάτα του Schrödinger</h1>
+        <p><em>Μόλις παρατηρηθεί, η κατάσταση της γάτας οριστικοποιείται για πάντα</em></p>
+
+        <div class="instructions">
+            <p>🔹 <strong>Σκοτάδι:</strong> Η γάτα είναι σε υπέρθεση (εναλλαγή εικόνων)</p>
+            <p>🔹 <strong>Φως:</strong> Η υπέρθεση καταρρέει - η γάτα "επιλέγει" μια μόνιμη κατάσταση</p>
+            <p>🔹 <strong>Επανεκκίνηση:</strong> Μόνο έτσι μπορεί να αλλάξει η κατάσταση</p>
+        </div>
+
+        <div id="status" class="status">
+            🎬 ΠΑΤΗΣΕ "ΕΝΑΡΞΗ" ΓΙΑ ΝΑ ΞΕΚΙΝΗΣΕΙ ΤΟ ΠΕΙΡΑΜΑ
+        </div>
+
+        <img id="catImage" class="cat-image" src="A-CAT.png" alt="Η γάτα του Schrödinger">
+
+        <div class="light-level">
+            Επίπεδο φωτός: <span id="lightValue">0</span>%
+            <div class="progress-bar">
+                <div id="lightProgress" class="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- ΚΡΥΦΗ ΚΑΜΕΡΑ -->
+        <div class="hidden-camera">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <canvas id="lightCanvas"></canvas>
+        </div>
+
+        <div>
+            <button class="button" onclick="startExperiment()" id="startBtn">ΕΝΑΡΞΗ ΠΕΙΡΑΜΑΤΟΣ</button>
+            <button class="button restart" onclick="restartExperiment()" id="restartBtn" disabled>ΕΠΑΝΕΚΚΙΝΗΣΗ</button>
+        </div>
+
+        <div class="explanation">
+            <p><strong>Η φιλοσοφία του πειράματος:</strong></p>
+            <p>Στην πραγματική φυσική, μόλις γίνει η πρώτη παρατήρηση και η κβαντική υπέρθεση καταρρεύσει, το σύστημα παραμένει στην ίδια κατάσταση για πάντα. Η γάτα δεν επιστρέφει σε υπέρθεση - μένει ζωντανή Ή νεκρή. Μόνο με επανεκκίνηση του πειράματος (νέα γάτα) μπορεί να αλλάξει αυτό.</p>
+        </div>
+    </div>
+
+    <script>
+        let cameraStream = null;
+        let imageInterval = null;
+        let isExperimentRunning = false;
+        let superpositionActive = false;
+        let finalStateDetermined = false;
+        let catIsAlive = true; // Προεπιλεγμένη κατάσταση
+
+        const catImage = document.getElementById('catImage');
+        const statusElement = document.getElementById('status');
+        const restartBtn = document.getElementById('restartBtn');
+        const startBtn = document.getElementById('startBtn');
+        const cameraVideo = document.getElementById('cameraVideo');
+        const lightValue = document.getElementById('lightValue');
+        const lightProgress = document.getElementById('lightProgress');
+
+        // Έναρξη πειράματος
+        async function startExperiment() {
+            if (isExperimentRunning) return;
+
+            try {
+                // Αίτημα πρόσβασης στην κάμερα
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                cameraVideo.srcObject = cameraStream;
+                isExperimentRunning = true;
+                finalStateDetermined = false;
+                startBtn.disabled = true;
+                startBtn.textContent = 'ΠΕΙΡΑΜΑ ΣΕ ΕΞΕΛΙΞΗ...';
+
+                // Έναρξη εναλλαγής εικόνων
+                startSuperposition();
+                
+                // Έναρξη παρακολούθησης φωτός
+                startLightMonitoring();
+
+            } catch (error) {
+                alert('Σφάλμα πρόσβασης στην κάμερα: ' + error.message);
+                startBtn.disabled = false;
+                startBtn.textContent = 'ΕΝΑΡΞΗ ΠΕΙΡΑΜΑΤΟΣ';
+            }
+        }
+
+        // Έναρξη κβαντικής υπέρθεσης (εναλλαγή εικόνων)
+        function startSuperposition() {
+            if (imageInterval) {
+                clearInterval(imageInterval);
+            }
+            
+            // Καθαρισμός τελικής κατάστασης
+            catImage.classList.remove('final-state');
+            finalStateDetermined = false;
+            superpositionActive = true;
+            
+            // Γρήγορη εναλλαγή εικόνων
+            imageInterval = setInterval(() => {
+                if (catImage.src.includes('A-CAT.png')) {
+                    catImage.src = 'D-CAT.png';
+                } else {
+                    catImage.src = 'A-CAT.png';
+                }
+            }, 400);
+            
+            updateStatus(true);
+            restartBtn.disabled = true;
+        }
+
+        // Σταμάτημα υπέρθεσης (κατάρρευση) - ΜΟΝΙΜΗ κατάσταση
+        function collapseSuperposition() {
+            if (imageInterval) {
+                clearInterval(imageInterval);
+                imageInterval = null;
+            }
+            
+            // Τυχαία επιλογή τελικής κατάστασης (μόνο στην πρώτη κατάρρευση)
+            if (!finalStateDetermined) {
+                catIsAlive = Math.random() < 0.5;
+                if (catIsAlive) {
+                    catImage.src = 'A-CAT.png';
+                } else {
+                    catImage.src = 'D-CAT.png';
+                }
+                finalStateDetermined = true;
+            } else {
+                // Σε επόμενες παρατηρήσεις, διατήρηση της ίδιας κατάστασης
+                if (catIsAlive) {
+                    catImage.src = 'A-CAT.png';
+                } else {
+                    catImage.src = 'D-CAT.png';
+                }
+            }
+            
+            // Οπτική ένδειξη τελικής κατάστασης
+            catImage.classList.add('final-state');
+            
+            superpositionActive = false;
+            updateStatus(false);
+            restartBtn.disabled = false;
+        }
+
+        // Ενημέρωση κατάστασης
+        function updateStatus(inSuperposition) {
+            if (inSuperposition) {
+                statusElement.textContent = '🔬 ΚΒΑΝΤΙΚΗ ΥΠΕΡΘΕΣΗ: Η γάτα είναι ΖΩΝΤΑΝΗ και ΝΕΚΡΗ ταυτόχρονα!';
+                statusElement.className = 'status superposition';
+            } else {
+                const state = catIsAlive ? 'ΖΩΝΤΑΝΗ' : 'ΝΕΚΡΗ';
+                statusElement.textContent = `🔍 ΠΑΡΑΤΗΡΗΣΗ: Η γάτα είναι ${state}! (Κατάσταση Οριστικοποιημένη)`;
+                statusElement.className = 'status collapsed';
+            }
+        }
+
+        // Παρακολούθηση φωτός
+        function startLightMonitoring() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            function checkLight() {
+                if (!isExperimentRunning) return;
+
+                try {
+                    canvas.width = 100;
+                    canvas.height = 75;
+                    context.drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
+                    
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    
+                    let totalBrightness = 0;
+                    let sampleCount = 0;
+                    
+                    for (let i = 0; i < data.length; i += 16) {
+                        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                        totalBrightness += brightness;
+                        sampleCount++;
+                    }
+                    
+                    const averageBrightness = totalBrightness / sampleCount;
+                    const lightPercentage = Math.min(100, Math.round((averageBrightness / 255) * 100));
+                    
+                    // Ενημέρωση οθόνης
+                    lightValue.textContent = lightPercentage;
+                    lightProgress.style.width = lightPercentage + '%';
+                    
+                    // Πολύ χαμηλό threshold
+                    const lightDetected = lightPercentage > 15;
+                    
+                    // Λογική ελέγχου
+                    if (lightDetected && superpositionActive) {
+                        // Πρώτη παρατήρηση - κατάρρευση υπέρθεσης
+                        collapseSuperposition();
+                    } else if (!lightDetected && superpositionActive) {
+                        // Σκοτάδι - συνέχιση υπέρθεσης
+                        // Δεν κάνουμε τίποτα, η υπέρθεση συνεχίζεται
+                    } else if (!lightDetected && !superpositionActive && !finalStateDetermined) {
+                        // Σπάνια περίπτωση - επιστροφή σε υπέρθεση μόνο αν δεν έχει οριστικοποιηθεί
+                        startSuperposition();
+                    }
+                    // Αν έχει οριστικοποιηθεί η κατάσταση, παραμένει ως έχει
+                    
+                    // Ανανέωση
+                    setTimeout(checkLight, 300);
+                    
+                } catch (e) {
+                    setTimeout(checkLight, 500);
+                }
+            }
+            
+            setTimeout(checkLight, 1000);
+        }
+
+        // Επανεκκίνηση πειράματος (νέα γάτα)
+        function restartExperiment() {
+            if (isExperimentRunning) {
+                finalStateDetermined = false;
+                superpositionActive = false;
+                startSuperposition();
+            }
+        }
+
+        // Καθαρισμός
+        window.addEventListener('beforeunload', () => {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+            if (imageInterval) {
+                clearInterval(imageInterval);
+            }
+        });
+    </script>
+</body>
+</html>
